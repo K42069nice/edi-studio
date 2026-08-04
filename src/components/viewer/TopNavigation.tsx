@@ -19,7 +19,7 @@ export default function TopNavigation({
         <div className="flex items-center gap-3">
 
           <h1 className="text-2xl font-bold tracking-tight text-white">
-            EDI Studio
+            edi-studio
           </h1>
 
           <span className="text-zinc-600">/</span>
