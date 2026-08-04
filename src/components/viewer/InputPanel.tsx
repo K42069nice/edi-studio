@@ -1,40 +1,40 @@
 "use client";
 
+import { LoadedFile } from "@/types/file";
+
 import EDIEditor from "../editor/EDIEditor";
+import FileCard from "../upload/FileCard";
+
 type Props = {
   edi: string;
+  loadedFile: LoadedFile | null;
   setEdi: (value: string) => void;
-  onAnalyze: () => void;
+  onFileSelected: (file: File) => void;
 };
 
-export default function InputPanel({ edi, setEdi, onAnalyze }: Props) {
+export default function InputPanel({
+  edi,
+  loadedFile,
+  setEdi,
+  onFileSelected,
+}: Props) {
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900 p-6">
-      <h2 className="text-xl font-semibold text-white mb-4">Input</h2>
+      <h2 className="mb-4 text-xl font-semibold text-white">
+        Input
+      </h2>
 
-      <EDIEditor value={edi} onChange={setEdi} />
+      <EDIEditor
+        value={edi}
+        onChange={setEdi}
+        onFileSelected={onFileSelected}
+      />
 
-      <div className="mt-5 rounded-lg border-2 border-dashed border-slate-700 p-8 text-center text-slate-400 hover:border-blue-500 transition">
-        <p className="text-lg">📂 Drag & Drop EDI file here</p>
-
-        <p className="mt-2 text-sm">or click to browse</p>
-      </div>
-
-      <div className="mt-4">
-        <button
-          onClick={onAnalyze}
-          className="
-    bg-blue-600
-    hover:bg-blue-700
-    px-6
-    py-3
-    rounded-lg
-    text-white
-  "
-        >
-          Analyze
-        </button>
-      </div>
+      {loadedFile && (
+        <div className="mt-4">
+          <FileCard file={loadedFile} />
+        </div>
+      )}
     </section>
   );
 }
