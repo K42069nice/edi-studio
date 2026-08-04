@@ -20,13 +20,9 @@ export default function Viewer() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const [analysis, setAnalysis] = useState<EDIAnalysis>({
-    messageType: null,
+    messageType: "",
     version: null,
-    buyer: null,
-    supplier: null,
-    documentNumber: null,
-    documentDate: null,
-    currency: null,
+    sections: [],
     segments: 0,
     status: "",
   });
@@ -34,13 +30,9 @@ export default function Viewer() {
   useEffect(() => {
     if (!edi.trim()) {
       setAnalysis({
-        messageType: null,
+        messageType: "",
         version: null,
-        buyer: null,
-        supplier: null,
-        documentNumber: null,
-        documentDate: null,
-        currency: null,
+        sections: [],
         segments: 0,
         status: "",
       });
@@ -77,7 +69,7 @@ export default function Viewer() {
         </div>
       )}
 
-      <TopNavigation />
+      <TopNavigation loadedFile={loadedFile} />
 
       <div className="grid grid-cols-2 gap-6 p-8">
         <InputPanel

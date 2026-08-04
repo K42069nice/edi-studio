@@ -1,25 +1,23 @@
-export type EDIField = {
+export interface InspectorField {
+  key: string;
   label: string;
   value: string | null;
 
   segment?: string;
   qualifier?: string;
   line?: number;
-};
+}
 
-export type EDISection = {
+export interface InspectorSection {
   id: string;
   title: string;
 
-  fields: EDIField[];
-};
+  fields: InspectorField[];
+}
 
-export type EDIAnalysis = {
+export interface ParsedDocument {
   messageType: string;
   version: string | null;
 
-  sections: EDISection[];
-
-  segments: number;
-  status: string;
-};
+  sections: InspectorSection[];
+}

@@ -1,40 +1,70 @@
-const tabs = [
-  "Viewer",
-  "Compare",
-  "Validate",
-  "Convert",
-  "AI Chat",
-];
+"use client";
 
-export default function TopNavigation() {
+import { LoadedFile } from "@/types/file";
+
+type Props = {
+  loadedFile: LoadedFile | null;
+};
+
+export default function TopNavigation({
+  loadedFile,
+}: Props) {
   return (
-    <nav className="border-b border-slate-800 bg-slate-950 px-8 py-4">
-      <div className="flex items-center gap-8">
+    <header className="border-b border-zinc-800 bg-zinc-900">
 
-        <h1 className="text-xl font-bold text-white">
-          EDI Studio
-        </h1>
+      <div className="px-8 pt-5">
 
-        <div className="flex gap-6">
+        {/* Title */}
 
-          {tabs.map((tab) => (
+        <div className="flex items-center gap-3">
 
-            <button
-              key={tab}
-              className="
-                text-slate-400
-                hover:text-white
-                transition
-              "
-            >
-              {tab}
-            </button>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            EDI Studio
+          </h1>
 
-          ))}
+          <span className="text-zinc-600">/</span>
+
+          <span className="text-sm text-zinc-500">
+            {loadedFile?.name ?? "No file opened"}
+          </span>
 
         </div>
 
+        {/* Navigation */}
+
+        <nav className="mt-6 flex gap-8">
+
+          <button
+            className="
+              border-b-2
+              border-zinc-100
+              pb-3
+              text-sm
+              font-medium
+              text-white
+            "
+          >
+            Viewer
+          </button>
+
+          <button
+            className="
+              border-b-2
+              border-transparent
+              pb-3
+              text-sm
+              text-zinc-400
+              transition-colors
+              hover:text-white
+            "
+          >
+            Compare
+          </button>
+
+        </nav>
+
       </div>
-    </nav>
+
+    </header>
   );
 }
