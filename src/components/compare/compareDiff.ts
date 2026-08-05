@@ -1,10 +1,7 @@
 import { diffChars, diffLines } from "diff";
 import { CompareLine } from "./compareTypes";
 
-export function compareDiff(
-  left: string,
-  right: string
-): CompareLine[] {
+export function compareDiff(left: string, right: string): CompareLine[] {
   const changes = diffLines(left, right);
 
   const result: CompareLine[] = [];
@@ -73,20 +70,14 @@ export function compareDiff(
     const current = result[i];
     const next = result[i + 1];
 
-    if (
-      current.type === "removed" &&
-      next.type === "added"
-    ) {
+    if (current.type === "removed" && next.type === "added") {
       current.type = "changed";
       next.type = "changed";
 
       current.rightLine = next.rightLine;
       next.leftLine = current.leftLine;
 
-      const chars = diffChars(
-        current.leftText,
-        next.rightText
-      );
+      const chars = diffChars(current.leftText, next.rightText);
 
       let leftColumn = 1;
       let rightColumn = 1;
@@ -121,20 +112,14 @@ export function compareDiff(
       }
     }
 
-    if (
-      current.type === "added" &&
-      next.type === "removed"
-    ) {
+    if (current.type === "added" && next.type === "removed") {
       current.type = "changed";
       next.type = "changed";
 
       current.leftLine = next.leftLine;
       next.rightLine = current.rightLine;
 
-      const chars = diffChars(
-        next.leftText,
-        current.rightText
-      );
+      const chars = diffChars(next.leftText, current.rightText);
 
       let leftColumn = 1;
       let rightColumn = 1;

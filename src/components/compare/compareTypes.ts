@@ -1,8 +1,4 @@
-export type CompareType =
-  | "equal"
-  | "added"
-  | "removed"
-  | "changed";
+export type CompareType = "equal" | "added" | "removed" | "changed";
 
 export type CompareInline = {
   line: number;

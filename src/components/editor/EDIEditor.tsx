@@ -11,7 +11,7 @@ import type { editor } from "monaco-editor";
 import { updateSegmentDecorations } from "@/lib/editorDecorations";
 import EditorPlaceholder from "../upload/EditorPlaceholder";
 
-import { CompareLine } from "@/components/compare/compareTypes";
+import { CompareRow } from "@/components/compare/compareEngine";
 import { applyCompareDecorations } from "@/components/compare/compareDecorations";
 
 type Props = {
@@ -21,7 +21,7 @@ type Props = {
 
   mode?: "viewer" | "compare";
 
-  diff?: CompareLine[];
+  diff?: CompareRow[];
 
   side?: "left" | "right";
 
@@ -39,6 +39,7 @@ export default function EDIEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const isSyncing = useRef(false);
+  const ignoreNextChange = useRef(false);
   const syncScrollRef = useRef(syncScroll);
   const highlightDecorations =
     useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -80,19 +81,29 @@ export default function EDIEditor({
 
     const file = event.dataTransfer.files?.[0];
 
-    if (!file) return;
+    if (file) {
+      onFileSelected(file);
+      return;
+    }
 
-    onFileSelected(file);
+    const text = event.dataTransfer.getData("text/plain");
+
+    if (text.trim()) {
+      onChange(text);
+    }
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
     const file = event.clipboardData.files?.[0];
 
-    if (!file) return;
+    if (file) {
+      event.preventDefault();
+      onFileSelected(file);
+      return;
+    }
 
-    event.preventDefault();
-
-    onFileSelected(file);
+    // Для обычного текста ничего не делаем.
+    // Monaco сам обработает вставку.
   }
 
   function handleBrowse() {
@@ -132,6 +143,36 @@ export default function EDIEditor({
       }, 700);
     }
   }
+
+  useEffect(() => {
+    const editor = editorRef.current;
+
+    if (!editor) return;
+
+    const model = editor.getModel();
+
+    if (!model) return;
+
+    // Уже актуально
+    if (model.getValue() === value) {
+      return;
+    }
+
+    ignoreNextChange.current = true;
+
+    const position = editor.getPosition();
+    const scrollTop = editor.getScrollTop();
+    const scrollLeft = editor.getScrollLeft();
+
+    model.setValue(value);
+
+    if (position) {
+      editor.setPosition(position);
+    }
+
+    editor.setScrollTop(scrollTop);
+    editor.setScrollLeft(scrollLeft);
+  }, [value]);
 
   useEffect(() => {
     registerScrollFunction(scrollToValue);
@@ -178,9 +219,19 @@ export default function EDIEditor({
         height="500px"
         defaultLanguage="plaintext"
         theme="vs-dark"
-        value={value}
-        onChange={(value) => onChange(value ?? "")}
+        defaultValue=""
+        onChange={(value) => {
+          if (ignoreNextChange.current) {
+            ignoreNextChange.current = false;
+            return;
+          }
+
+          onChange(value ?? "");
+        }}
         onMount={(editor, monaco) => {
+          const model = monaco.editor.createModel("", "plaintext");
+
+          editor.setModel(model);
           editorRef.current = editor;
           if (mode === "compare") {
             (window as any)[side === "left" ? "leftEditor" : "rightEditor"] =

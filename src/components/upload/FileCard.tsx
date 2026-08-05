@@ -1,7 +1,7 @@
-import { LoadedFile } from "@/types/file";
+import { Document } from "@/types/document";
 
 type Props = {
-  file: LoadedFile | null;
+  file: Document | null;
 };
 
 function formatFileSize(size: number) {

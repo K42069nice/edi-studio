@@ -1,5 +1,3 @@
-
-
 export type CompareRow = {
   left: string;
   right: string;
@@ -26,37 +24,23 @@ function getSegment(line?: string) {
 
 export function compareEngine(
   left: string,
-  right: string
+  right: string,
 ): CompareEngineResult {
+  const leftLines = left.replace(/\r/g, "").split("\n");
 
-  const leftLines = left
-    .replace(/\r/g, "")
-    .split("\n");
-
-  const rightLines = right
-    .replace(/\r/g, "")
-    .split("\n");
+  const rightLines = right.replace(/\r/g, "").split("\n");
 
   const rows: CompareRow[] = [];
 
   let leftIndex = 0;
   let rightIndex = 0;
 
-  while (
-    leftIndex < leftLines.length ||
-    rightIndex < rightLines.length
-  ) {
+  while (leftIndex < leftLines.length || rightIndex < rightLines.length) {
+    const leftLine = leftLines[leftIndex];
 
-    const leftLine =
-      leftLines[leftIndex];
+    const rightLine = rightLines[rightIndex];
 
-    const rightLine =
-      rightLines[rightIndex];
-
-    if (
-      leftLine === undefined &&
-      rightLine === undefined
-    ) {
+    if (leftLine === undefined && rightLine === undefined) {
       break;
     }
 
@@ -65,20 +49,13 @@ export function compareEngine(
     // --------------------------------
 
     if (leftLine === rightLine) {
-
       rows.push({
         left: leftLine ?? "",
         right: rightLine ?? "",
 
-        leftLine:
-          leftLine == null
-            ? null
-            : leftIndex + 1,
+        leftLine: leftLine == null ? null : leftIndex + 1,
 
-        rightLine:
-          rightLine == null
-            ? null
-            : rightIndex + 1,
+        rightLine: rightLine == null ? null : rightIndex + 1,
 
         type: "equal",
       });
@@ -88,7 +65,6 @@ export function compareEngine(
 
       continue;
     }
-
 
     // --------------------------------
     // Added / Removed
@@ -103,8 +79,7 @@ export function compareEngine(
       i < Math.min(rightLines.length, rightIndex + LOOK_AHEAD);
       i++
     ) {
-      if (getSegment(rightLines[i]) === getSegment(leftLine))
-      {
+      if (getSegment(rightLines[i]) === getSegment(leftLine)) {
         rightMatch = i;
         break;
       }
@@ -117,10 +92,7 @@ export function compareEngine(
       i < Math.min(leftLines.length, leftIndex + LOOK_AHEAD);
       i++
     ) {
-      if (
-        getSegment(leftLines[i]) ===
-        getSegment(rightLine)
-        ){
+      if (getSegment(leftLines[i]) === getSegment(rightLine)) {
         leftMatch = i;
         break;
       }
@@ -129,14 +101,9 @@ export function compareEngine(
     // строки есть только справа
     if (
       rightMatch !== -1 &&
-      (
-        leftMatch === -1 ||
-        rightMatch - rightIndex <= leftMatch - leftIndex
-      )
+      (leftMatch === -1 || rightMatch - rightIndex <= leftMatch - leftIndex)
     ) {
-
       while (rightIndex < rightMatch) {
-
         rows.push({
           left: "",
           right: rightLines[rightIndex],
@@ -155,9 +122,7 @@ export function compareEngine(
 
     // строки есть только слева
     if (leftMatch !== -1) {
-
       while (leftIndex < leftMatch) {
-
         rows.push({
           left: leftLines[leftIndex],
           right: "",
@@ -174,7 +139,7 @@ export function compareEngine(
       continue;
     }
 
-        // --------------------------------
+    // --------------------------------
     // Changed
     // --------------------------------
 
@@ -182,12 +147,11 @@ export function compareEngine(
     const rightTag = getSegment(rightLine);
 
     if (
-        leftTag &&
-        leftTag === rightTag &&
-        rightMatch === -1 &&
-        leftMatch === -1
+      leftTag &&
+      leftTag === rightTag &&
+      rightMatch === -1 &&
+      leftMatch === -1
     ) {
-
       rows.push({
         left: leftLine ?? "",
         right: rightLine ?? "",
@@ -212,31 +176,21 @@ export function compareEngine(
       left: leftLine ?? "",
       right: rightLine ?? "",
 
-      leftLine:
-        leftLine == null
-          ? null
-          : leftIndex + 1,
+      leftLine: leftLine == null ? null : leftIndex + 1,
 
-      rightLine:
-        rightLine == null
-          ? null
-          : rightIndex + 1,
+      rightLine: rightLine == null ? null : rightIndex + 1,
 
       type: "changed",
     });
 
     leftIndex++;
     rightIndex++;
-}
-    return {
+  }
+  return {
     rows,
 
-    leftText: rows
-      .map((r) => r.left)
-      .join("\n"),
+    leftText: rows.map((r) => r.left).join("\n"),
 
-    rightText: rows
-      .map((r) => r.right)
-      .join("\n"),
+    rightText: rows.map((r) => r.right).join("\n"),
   };
 }

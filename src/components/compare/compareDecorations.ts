@@ -11,7 +11,7 @@ export function applyCompareDecorations(
   editorInstance: editor.IStandaloneCodeEditor,
   monaco: typeof import("monaco-editor"),
   rows: CompareRow[],
-  side: "left" | "right"
+  side: "left" | "right",
 ) {
   const model = editorInstance.getModel();
 
@@ -20,61 +20,54 @@ export function applyCompareDecorations(
   let decorations = collections.get(editorInstance);
 
   if (!decorations) {
-    decorations =
-      editorInstance.createDecorationsCollection();
+    decorations = editorInstance.createDecorationsCollection();
 
     collections.set(editorInstance, decorations);
   }
 
   const items: editor.IModelDeltaDecoration[] = [];
 
-for (let index = 0; index < rows.length; index++) {
-  const row = rows[index];
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
 
-  // Номер строки в выровненном тексте Monaco
-  const lineNumber = index + 1;
+    // Номер строки в выровненном тексте Monaco
+    const lineNumber = index + 1;
 
-let className: string | undefined;
+    let className: string | undefined;
 
+    switch (row.type) {
+      case "added":
+        className = side === "right" ? "diff-added" : "diff-placeholder";
+        break;
 
-switch (row.type) {
-  case "added":
-    className =
-      side === "right"
-        ? "diff-added"
-        : "diff-placeholder";
-    break;
+      case "removed":
+        className = side === "left" ? "diff-added" : "diff-placeholder";
+        break;
 
-  case "removed":
-    className =
-      side === "left"
-        ? "diff-added"
-        : "diff-placeholder";
-    break;
+      case "changed":
+        className = "diff-changed";
+        break;
 
-  case "changed":
-    className = "diff-changed";
-    break;
+      default:
+        continue;
+    }
 
-  default:
-    continue;
-}
+    console.log({
+      lineNumber,
+      side,
+      type: row.type,
+      left: row.left,
+      right: row.right,
+    });
 
-console.log({
-  lineNumber,
-  side,
-  type: row.type,
-  left: row.left,
-  right: row.right,
-});
+    if (lineNumber > model.getLineCount()) {
+      continue;
+    }
+
+    const maxColumn = model.getLineMaxColumn(lineNumber);
 
     items.push({
-      range: new monaco.Range(
-        lineNumber,
-        1,
-        lineNumber,
-        model.getLineMaxColumn(lineNumber)
-      ),
+      range: new monaco.Range(lineNumber, 1, lineNumber, maxColumn),
 
       options: {
         isWholeLine: true,
@@ -83,28 +76,30 @@ console.log({
     });
 
     if (row.type === "changed") {
-  const diff = getInlineDiff(row.left, row.right);
+      const diff = getInlineDiff(row.left, row.right);
 
-  const inline =
-    side === "left"
-      ? diff.left
-      : diff.right;
+      const inline = side === "left" ? diff.left : diff.right;
 
-  if (inline.end > inline.start) {
-    items.push({
-      range: new monaco.Range(
-        lineNumber,
-        inline.start + 1,
-        lineNumber,
-        inline.end + 1
-      ),
+      if (inline.end > inline.start) {
+        const startColumn = Math.min(inline.start + 1, maxColumn);
+        const endColumn = Math.min(inline.end + 1, maxColumn);
 
-      options: {
-        inlineClassName: "diff-inline-changed",
-      },
-    });
-  }
-}
+        if (endColumn > startColumn) {
+          items.push({
+            range: new monaco.Range(
+              lineNumber,
+              startColumn,
+              lineNumber,
+              endColumn,
+            ),
+
+            options: {
+              inlineClassName: "diff-inline-changed",
+            },
+          });
+        }
+      }
+    }
   }
 
   decorations.set(items);
