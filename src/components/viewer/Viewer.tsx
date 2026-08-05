@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { EditorProvider } from "@/context/EditorContext";
+
 import TopNavigation from "./TopNavigation";
 import InputPanel from "./InputPanel";
 import OutputPanel from "./OutputPanel";
@@ -62,6 +64,7 @@ export default function Viewer() {
   }
 
   return (
+    <EditorProvider>
     <main className="min-h-screen bg-slate-950">
       {showSuccess && (
         <div className="fixed right-6 top-6 z-50 rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 text-green-300 shadow-lg backdrop-blur">
@@ -79,8 +82,10 @@ export default function Viewer() {
           loadedFile={loadedFile}
         />
 
-        <OutputPanel analysis={analysis} />
+        <OutputPanel analysis={analysis}
+        />
       </div>
     </main>
+    </EditorProvider>
   );
 }

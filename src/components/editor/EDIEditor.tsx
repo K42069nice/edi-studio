@@ -1,6 +1,7 @@
 "use client";
 
 import Editor, { OnMount } from "@monaco-editor/react";
+import { useEditor } from "@/context/EditorContext";
 
 import { EDIFACT_SEGMENTS } from "@/lib/edifactSegments";
 
@@ -10,26 +11,45 @@ import type { editor } from "monaco-editor";
 import { updateSegmentDecorations } from "@/lib/editorDecorations";
 import EditorPlaceholder from "../upload/EditorPlaceholder";
 
+import { CompareLine } from "@/components/compare/compareTypes";
+import { applyCompareDecorations } from "@/components/compare/compareDecorations";
+
 type Props = {
   value: string;
   onChange: (value: string) => void;
   onFileSelected: (file: File) => void;
-};
 
+  mode?: "viewer" | "compare";
+
+  diff?: CompareLine[];
+
+  side?: "left" | "right";
+
+  syncScroll?: boolean;
+};
 export default function EDIEditor({
   value,
   onChange,
   onFileSelected,
-
+  mode = "viewer",
+  diff = [],
+  side = "left",
+  syncScroll = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const highlightDecorations = useRef<editor.IEditorDecorationsCollection | null>(null);
-
+  const isSyncing = useRef(false);
+  const syncScrollRef = useRef(syncScroll);
+  const highlightDecorations =
+    useRef<editor.IEditorDecorationsCollection | null>(null);
+  const flashDecorations = useRef<editor.IEditorDecorationsCollection | null>(
+    null,
+  );
   const pinnedSegments = useRef(new Map<string, string>());
   const disabledSegments = useRef(new Set<string>());
 
   const [isDragActive, setIsDragActive] = useState(false);
+  const { registerScrollFunction } = useEditor();
 
   function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -79,23 +99,65 @@ export default function EDIEditor({
     fileInputRef.current?.click();
   }
 
+  function scrollToValue(value: string) {
+    const editor = editorRef.current;
+
+    if (!editor) return;
+
+    const model = editor.getModel();
+
+    if (!model) return;
+
+    const matches = model.findMatches(value, false, false, false, null, false);
+
+    if (!matches.length) return;
+
+    editor.revealRangeInCenter(matches[0].range);
+
+    editor.setSelection(matches[0].range);
+
+    editor.focus();
+    if (flashDecorations.current) {
+      flashDecorations.current.set([
+        {
+          range: matches[0].range,
+          options: {
+            inlineClassName: "editor-focus",
+          },
+        },
+      ]);
+
+      setTimeout(() => {
+        flashDecorations.current?.clear();
+      }, 700);
+    }
+  }
+
   useEffect(() => {
+    registerScrollFunction(scrollToValue);
+  }, [registerScrollFunction]);
+
+  useEffect(() => {
+    syncScrollRef.current = syncScroll;
+    console.log("syncScroll =", syncScroll);
+  }, [syncScroll]);
+
+  useEffect(() => {
+    if (mode !== "compare") return;
+
     if (!editorRef.current) return;
 
-    const monaco =
-      (window as typeof window & {
+    const monaco = (
+      window as typeof window & {
         monaco?: typeof import("monaco-editor");
-      }).monaco;
+      }
+    ).monaco;
 
     if (!monaco) return;
+    console.log("COMPARE", diff.length, side);
 
-    updateSegmentDecorations(
-      editorRef.current,
-      monaco,
-      pinnedSegments.current,
-      disabledSegments.current
-    );
-  }, [value]);
+    applyCompareDecorations(editorRef.current, monaco, diff, side);
+  }, [diff, mode, side]);
 
   return (
     <div
@@ -105,15 +167,10 @@ export default function EDIEditor({
         overflow-hidden
         rounded-md
         transition-all
-        ${
-          isDragActive
-            ? "ring-2 ring-zinc-300"
-            : "ring-1 ring-zinc-800"
-        }
+        ${isDragActive ? "ring-2 ring-zinc-300" : "ring-1 ring-zinc-800"}
       `}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onPaste={handlePaste}
     >
@@ -124,153 +181,175 @@ export default function EDIEditor({
         value={value}
         onChange={(value) => onChange(value ?? "")}
         onMount={(editor, monaco) => {
-        editorRef.current = editor;
-        highlightDecorations.current =
-        editor.createDecorationsCollection();
-        
-        updateSegmentDecorations(
-          editor,
-          monaco,
-          pinnedSegments.current
-        );
-
-        editor.onDidChangeCursorSelection(() => {
-          const model = editor.getModel();
-
-          if (!model || !highlightDecorations.current) return;
-
-          const selection = editor.getSelection();
-
-          if (!selection) return;
-
-          const text = model.getValueInRange(selection).trim();
-
-          if (!EDIFACT_SEGMENTS.has(text)) {
-            highlightDecorations.current.set([]);
-            return;
+          editorRef.current = editor;
+          if (mode === "compare") {
+            (window as any)[side === "left" ? "leftEditor" : "rightEditor"] =
+              editor;
+          }
+          highlightDecorations.current = editor.createDecorationsCollection();
+          flashDecorations.current = editor.createDecorationsCollection();
+          if (mode === "viewer") {
+            updateSegmentDecorations(editor, monaco, pinnedSegments.current);
           }
 
-          const matches = model.findMatches(
-            `\\b${text}\\b`,
-            false,
-            true,
-            false,
-            null,
-            false
-          );
+          editor.onDidScrollChange((event) => {
+            if (!syncScrollRef.current) return;
 
-          highlightDecorations.current.set(
-            matches.map((match) => ({
-              range: match.range,
-              options: {
-                inlineClassName: "segment-selected",
-              },
-            }))
-          );
-        });
+            if ((window as any).__syncing) return;
 
-        editor.onMouseDown((event) => {
-          if (event.event.detail !== 2) return;
+            const other = (window as any)[
+              side === "left" ? "rightEditor" : "leftEditor"
+            ];
 
-          const model = editor.getModel();
+            if (!other) return;
 
-          if (!model) return;
+            (window as any).__syncing = true;
 
-          const position = event.target.position;
+            other.setScrollTop(event.scrollTop);
+            other.setScrollLeft(event.scrollLeft);
 
-          if (!position) return;
+            requestAnimationFrame(() => {
+              (window as any).__syncing = false;
+            });
+          });
 
-          // Только первые три буквы сегмента
-          if (position.column > 4) return;
+          editor.onDidChangeCursorSelection(() => {
+            const model = editor.getModel();
 
-          const line = model.getLineContent(position.lineNumber);
+            if (!model || !highlightDecorations.current) return;
 
-          const match = line.match(/^([A-Z]{3})/);
+            const selection = editor.getSelection();
 
-          if (!match) return;
+            if (!selection) return;
 
-          const tag = match[1];
+            const text = model.getValueInRange(selection).trim();
 
-          const hasDefaultColor = [
-            "UNB",
-            "UNH",
-            "BGM",
-            "DTM",
-            "NAD",
-            "LIN",
-            "QTY",
-            "PRI",
-            "UNS",
-            "UNT",
-          ].includes(tag);
-
-          const pinned = new Map(pinnedSegments.current);
-          const disabled = new Set(disabledSegments.current);
-
-          if (hasDefaultColor) {
-            if (disabled.has(tag)) {
-              disabled.delete(tag);
-            } else {
-              disabled.add(tag);
+            if (!EDIFACT_SEGMENTS.has(text)) {
+              highlightDecorations.current.set([]);
+              return;
             }
-          } else {
-            if (pinned.has(tag)) {
-              pinned.delete(tag);
+
+            const matches = model.findMatches(
+              `\\b${text}\\b`,
+              false,
+              true,
+              false,
+              null,
+              false,
+            );
+
+            highlightDecorations.current.set(
+              matches.map((match) => ({
+                range: match.range,
+                options: {
+                  inlineClassName: "segment-selected",
+                },
+              })),
+            );
+          });
+
+          editor.onMouseDown((event) => {
+            if (event.event.detail !== 2) return;
+
+            const model = editor.getModel();
+
+            if (!model) return;
+
+            const position = event.target.position;
+
+            if (!position) return;
+
+            // Только первые три буквы сегмента
+            if (position.column > 4) return;
+
+            const line = model.getLineContent(position.lineNumber);
+
+            const match = line.match(/^([A-Z]{3})/);
+
+            if (!match) return;
+
+            const tag = match[1];
+
+            const hasDefaultColor = [
+              "UNB",
+              "UNH",
+              "BGM",
+              "DTM",
+              "NAD",
+              "LIN",
+              "QTY",
+              "PRI",
+              "UNS",
+              "UNT",
+            ].includes(tag);
+
+            const pinned = new Map(pinnedSegments.current);
+            const disabled = new Set(disabledSegments.current);
+
+            if (hasDefaultColor) {
+              if (disabled.has(tag)) {
+                disabled.delete(tag);
+              } else {
+                disabled.add(tag);
+              }
             } else {
-              pinned.set(tag, tag);
+              if (pinned.has(tag)) {
+                pinned.delete(tag);
+              } else {
+                pinned.set(tag, tag);
+              }
             }
-          }
 
-          pinnedSegments.current = pinned;
-          disabledSegments.current = disabled;
+            pinnedSegments.current = pinned;
+            disabledSegments.current = disabled;
 
-          updateSegmentDecorations(
-            editor,
-            monaco,
-            pinnedSegments.current,
-            disabledSegments.current
-          );
-        
-          
-        });
+            if (mode === "viewer") {
+              updateSegmentDecorations(
+                editor,
+                monaco,
+                pinnedSegments.current,
+                disabledSegments.current,
+              );
+            }
+          });
+        }}
+        options={{
+          minimap: {
+            enabled: false,
+          },
 
-      }} options={{
-            minimap: {
-              enabled: false,
-            },
+          fontSize: 15,
 
-            fontSize: 15,
+          fontFamily: "JetBrains Mono",
 
-            fontFamily: "JetBrains Mono",
+          fontLigatures: true,
 
-            fontLigatures: true,
+          lineHeight: 26,
 
-            lineHeight: 26,
+          wordWrap: "on",
 
-            wordWrap: "on",
+          automaticLayout: true,
 
-            automaticLayout: true,
+          scrollBeyondLastLine: false,
 
-            scrollBeyondLastLine: false,
+          smoothScrolling: true,
 
-            smoothScrolling: true,
+          cursorBlinking: "phase",
 
-            cursorBlinking: "phase",
+          cursorSmoothCaretAnimation: "on",
 
-            cursorSmoothCaretAnimation: "on",
+          renderLineHighlight: "all",
 
-            renderLineHighlight: "all",
+          roundedSelection: true,
 
-            roundedSelection: true,
+          guides: {
+            indentation: true,
+          },
 
-            guides: {
-              indentation: true,
-            },
-
-            padding: {
-              top: 20,
-              bottom: 20,
-            },
+          padding: {
+            top: 20,
+            bottom: 20,
+          },
         }}
       />
 

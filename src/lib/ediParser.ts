@@ -166,7 +166,7 @@ export function parseEDI(content: string): EDIAnalysis {
     case "DESADV":
       sections.push({
         id: "document",
-        title: "📄 Shipment",
+        title: "📄 Header",
         fields: [
           field("Despatch Advice", documentNumber, "BGM"),
           field("Despatch Date", documentDate, "DTM", "137"),
@@ -189,7 +189,7 @@ export function parseEDI(content: string): EDIAnalysis {
 
       sections.push({
         id: "logistics",
-        title: "📦 Logistics",
+        title: "📦 Packaging",
         fields: [
           field("Packages", String(packageCount), "PAC"),
           field("Pallets", String(palletCount), "PAC"),
