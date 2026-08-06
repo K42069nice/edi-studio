@@ -1,3 +1,5 @@
+import { splitSegments } from "@/lib/ediFormatter";
+
 export type CompareRow = {
   left: string;
   right: string;
@@ -26,10 +28,8 @@ export function compareEngine(
   left: string,
   right: string,
 ): CompareEngineResult {
-  const leftLines = left.replace(/\r/g, "").split("\n");
-
-  const rightLines = right.replace(/\r/g, "").split("\n");
-
+  const leftLines = splitSegments(left);
+  const rightLines = splitSegments(right);
   const rows: CompareRow[] = [];
 
   let leftIndex = 0;

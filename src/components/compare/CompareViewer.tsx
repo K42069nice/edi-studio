@@ -9,6 +9,7 @@ import Switch from "../ui/Switch";
 import { detectFileType } from "@/lib/file/detectFileType";
 
 import { compareEngine } from "./compareEngine";
+import { formatEDI } from "@/lib/ediFormatter";
 
 export default function CompareViewer() {
   const [leftDocument, setLeftDocument] = useState<Document | null>(null);
@@ -18,7 +19,7 @@ export default function CompareViewer() {
   const [showIdentical, setShowIdentical] = useState(false);
 
   async function handleLeftFile(file: File) {
-    const content = await file.text();
+    const content = formatEDI(await file.text());
 
     setLeftDocument({
       content,
@@ -30,7 +31,7 @@ export default function CompareViewer() {
   }
 
   async function handleRightFile(file: File) {
-    const content = await file.text();
+    const content = formatEDI(await file.text());
 
     setRightDocument({
       content,
@@ -50,6 +51,7 @@ export default function CompareViewer() {
   }
 
   function handleLeftChange(value: string) {
+    value = formatEDI(value);
     setLeftDocument((prev) => {
       if (value.trim() === "") {
         return null;
@@ -66,6 +68,7 @@ export default function CompareViewer() {
   }
 
   function handleRightChange(value: string) {
+    value = formatEDI(value);
     setRightDocument((prev) => {
       if (value.trim() === "") {
         return null;

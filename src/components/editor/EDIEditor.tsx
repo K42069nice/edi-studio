@@ -2,15 +2,11 @@
 
 import Editor, { OnMount } from "@monaco-editor/react";
 import { useEditor } from "@/context/EditorContext";
-
 import { EDIFACT_SEGMENTS } from "@/lib/edifactSegments";
-
 import { useEffect, useRef, useState } from "react";
 import type { editor } from "monaco-editor";
-
 import { updateSegmentDecorations } from "@/lib/editorDecorations";
 import EditorPlaceholder from "../upload/EditorPlaceholder";
-
 import { CompareRow } from "@/components/compare/compareEngine";
 import { applyCompareDecorations } from "@/components/compare/compareDecorations";
 
@@ -18,13 +14,9 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onFileSelected: (file: File) => void;
-
   mode?: "viewer" | "compare";
-
   diff?: CompareRow[];
-
   side?: "left" | "right";
-
   syncScroll?: boolean;
 };
 export default function EDIEditor({
@@ -39,7 +31,9 @@ export default function EDIEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const isSyncing = useRef(false);
+  const isUserTyping = useRef(false);
   const ignoreNextChange = useRef(false);
+  const isInternalUpdate = useRef(false);
   const syncScrollRef = useRef(syncScroll);
   const highlightDecorations =
     useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -112,21 +106,13 @@ export default function EDIEditor({
 
   function scrollToValue(value: string) {
     const editor = editorRef.current;
-
     if (!editor) return;
-
     const model = editor.getModel();
-
     if (!model) return;
-
     const matches = model.findMatches(value, false, false, false, null, false);
-
     if (!matches.length) return;
-
     editor.revealRangeInCenter(matches[0].range);
-
     editor.setSelection(matches[0].range);
-
     editor.focus();
     if (flashDecorations.current) {
       flashDecorations.current.set([
@@ -153,18 +139,34 @@ export default function EDIEditor({
 
     if (!model) return;
 
-    // Уже актуально
     if (model.getValue() === value) {
       return;
     }
 
+    if (isInternalUpdate.current) {
+      return;
+    }
+
     ignoreNextChange.current = true;
+    isInternalUpdate.current = true;
 
     const position = editor.getPosition();
     const scrollTop = editor.getScrollTop();
     const scrollLeft = editor.getScrollLeft();
 
-    model.setValue(value);
+    editor.pushUndoStop();
+    model.pushEditOperations(
+      [],
+      [
+        {
+          range: model.getFullModelRange(),
+          text: value,
+        },
+      ],
+      () => null,
+    );
+
+    editor.pushUndoStop();
 
     if (position) {
       editor.setPosition(position);
@@ -172,6 +174,10 @@ export default function EDIEditor({
 
     editor.setScrollTop(scrollTop);
     editor.setScrollLeft(scrollLeft);
+
+    requestAnimationFrame(() => {
+      isInternalUpdate.current = false;
+    });
   }, [value]);
 
   useEffect(() => {
@@ -225,6 +231,8 @@ export default function EDIEditor({
             ignoreNextChange.current = false;
             return;
           }
+
+          isInternalUpdate.current = false;
 
           onChange(value ?? "");
         }}
@@ -371,35 +379,21 @@ export default function EDIEditor({
           minimap: {
             enabled: false,
           },
-
           fontSize: 15,
-
           fontFamily: "JetBrains Mono",
-
           fontLigatures: true,
-
           lineHeight: 26,
-
           wordWrap: "on",
-
           automaticLayout: true,
-
           scrollBeyondLastLine: false,
-
           smoothScrolling: true,
-
           cursorBlinking: "phase",
-
           cursorSmoothCaretAnimation: "on",
-
           renderLineHighlight: "all",
-
           roundedSelection: true,
-
           guides: {
             indentation: true,
           },
-
           padding: {
             top: 20,
             bottom: 20,
