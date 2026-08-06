@@ -1,10 +1,46 @@
-import { EDIAnalysis, EDIField, EDISection } from "@/types/edi";
+import { EDIAnalysis, EDIField, EDISection, EDILine } from "@/types/edi";
+import { createParserContext } from "@/lib/parser/context";
+import { parseUNH } from "@/lib/parser/handlers/unh";
+import { parseBGM } from "@/lib/parser/handlers/bgm";
+import { parseDTM } from "@/lib/parser/handlers/dtm";
+import { parseNAD } from "@/lib/parser/handlers/nad";
+import { parseRFF } from "@/lib/parser/handlers/rff";
+import { parseLIN } from "@/lib/parser/handlers/lin";
+import { parsePIA } from "@/lib/parser/handlers/pia";
+import { parseQTY } from "@/lib/parser/handlers/qty";
+import { parseMEA } from "@/lib/parser/handlers/mea";
+import { parsePRI } from "@/lib/parser/handlers/pri";
+import { parseIMD } from "@/lib/parser/handlers/imd";
+
+function formatDate(value: string | null): string | null {
+  if (!value || value.length !== 8) {
+    return value;
+  }
+
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(4, 6)) - 1;
+  const day = Number(value.slice(6, 8));
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month, day));
+}
+
+function cleanParty(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return value.replace(/::9$/, "");
+}
 
 function field(
   label: string,
   value: string | null,
   segment?: string,
-  qualifier?: string
+  qualifier?: string,
 ): EDIField {
   return {
     label,
@@ -15,12 +51,11 @@ function field(
 }
 
 export function parseEDI(content: string): EDIAnalysis {
-  const lines = content
+  const segmentsList = content
     .split("'")
     .map((l) => l.trim())
     .filter(Boolean);
-
-  const segments = lines.length;
+  const segments = segmentsList.length;
 
   let messageType = "";
   let version: string | null = null;
@@ -28,6 +63,8 @@ export function parseEDI(content: string): EDIAnalysis {
   // Common
   let documentNumber: string | null = null;
   let documentDate: string | null = null;
+  let dispatchDate: string | null = null;
+  let deliveryDate: string | null = null;
   let currency: string | null = null;
 
   // Parties
@@ -46,30 +83,28 @@ export function parseEDI(content: string): EDIAnalysis {
   let ssccCount = 0;
   let grossWeight: string | null = null;
 
-  for (const line of lines) {
+  // Lines
+  let lines: EDILine[] = [];
+  let currentLine: EDILine | null = null;
+
+  const ctx = createParserContext();
+
+  for (const line of segmentsList) {
     const parts = line.split("+");
 
     switch (parts[0]) {
       case "UNH": {
-        messageType = parts[2]?.split(":")[0] ?? "";
-        version = parts[2]?.split(":")[2] ?? null;
+        parseUNH(parts, ctx);
         break;
       }
 
       case "BGM": {
-        documentNumber = parts[2] ?? null;
+        parseBGM(parts, ctx);
         break;
       }
 
       case "DTM": {
-        const values = parts[1]?.split(":");
-
-        if (!values) break;
-
-        if (values[0] === "137") {
-          documentDate = values[1] ?? null;
-        }
-
+        parseDTM(parts, ctx);
         break;
       }
 
@@ -79,42 +114,12 @@ export function parseEDI(content: string): EDIAnalysis {
       }
 
       case "RFF": {
-        const values = parts[1]?.split(":");
-
-        if (!values) break;
-
-        switch (values[0]) {
-          case "ON":
-            orderNumber = values[1] ?? null;
-            break;
-
-          case "DQ":
-            deliveryNote = values[1] ?? null;
-            break;
-        }
-
+        parseRFF(parts, ctx);
         break;
       }
 
       case "NAD": {
-        switch (parts[1]) {
-          case "BY":
-            buyer = parts[2] ?? null;
-            break;
-
-          case "SU":
-            supplier = parts[2] ?? null;
-            break;
-
-          case "DP":
-            deliveryPoint = parts[2] ?? null;
-            break;
-
-          case "IV":
-            invoiceRecipient = parts[2] ?? null;
-            break;
-        }
-
+        parseNAD(parts, ctx);
         break;
       }
 
@@ -131,9 +136,35 @@ export function parseEDI(content: string): EDIAnalysis {
         ssccCount++;
         break;
 
-      case "MEA":
-        grossWeight = parts[3]?.split(":")[1] ?? grossWeight;
+      case "LIN": {
+        parseLIN(parts, ctx);
         break;
+      }
+
+      case "PIA": {
+        parsePIA(parts, ctx);
+        break;
+      }
+
+      case "IMD": {
+        parseIMD(parts, ctx);
+        break;
+      }
+
+      case "QTY": {
+        parseQTY(parts, ctx);
+        break;
+      }
+
+      case "MEA": {
+        parseMEA(parts, ctx);
+        break;
+      }
+
+      case "PRI": {
+        parsePRI(parts, ctx);
+        break;
+      }
     }
   }
 
@@ -169,7 +200,9 @@ export function parseEDI(content: string): EDIAnalysis {
         title: "📄 Header",
         fields: [
           field("Despatch Advice", documentNumber, "BGM"),
-          field("Despatch Date", documentDate, "DTM", "137"),
+          field("Document Date", documentDate, "DTM", "137"),
+          field("Dispatch Date", dispatchDate, "DTM", "11"),
+          field("Delivery Date", deliveryDate, "DTM", "17"),
           field("Order Number", orderNumber, "RFF", "ON"),
           field("Delivery Note", deliveryNote, "RFF", "DQ"),
           field("Version", version, "UNH"),
@@ -201,11 +234,59 @@ export function parseEDI(content: string): EDIAnalysis {
       break;
   }
 
+  messageType = ctx.messageType;
+  version = ctx.version;
+
+  documentNumber = ctx.documentNumber;
+  documentDate = ctx.documentDate;
+  dispatchDate = ctx.dispatchDate;
+  deliveryDate = ctx.deliveryDate;
+
+  buyer = ctx.buyer;
+  supplier = ctx.supplier;
+  deliveryPoint = ctx.deliveryPoint;
+  invoiceRecipient = ctx.invoiceRecipient;
+
+  orderNumber = ctx.orderNumber;
+  deliveryNote = ctx.deliveryNote;
+
+  lines = ctx.lines;
+  grossWeight = ctx.grossWeight;
+
   return {
     messageType,
     version,
     sections,
     segments,
     status: "OK",
+
+    document: {
+      number: documentNumber ?? undefined,
+      documentDate: documentDate ?? undefined,
+      dispatchDate: dispatchDate ?? undefined,
+      deliveryDate: deliveryDate ?? undefined,
+    },
+
+    references: {
+      order: orderNumber ?? undefined,
+      deliveryNote: deliveryNote ?? undefined,
+    },
+
+    parties: {
+      buyer: buyer ?? undefined,
+      supplier: supplier ?? undefined,
+      deliveryPoint: deliveryPoint ?? undefined,
+      invoicee: invoiceRecipient ?? undefined,
+    },
+
+    lines,
+
+    partiesList: ctx.partiesList,
+
+    referencesList: ctx.referencesList,
+
+    dates: ctx.dates,
+
+    packages: ctx.packages,
   };
 }

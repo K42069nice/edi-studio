@@ -1,51 +1,82 @@
-export interface ParsedValue {
-  value: string | null;
+export type DocumentField = {
+  label: string;
+  value: string;
 
   segment: string;
 
-  qualifier?: string;
+  line?: number;
+};
+
+export type Party = {
+  qualifier: string;
+
+  label: string;
+
+  id: string;
+
+  segment: string;
 
   line?: number;
-}
+};
 
-export interface InvoiceData {
-  document: {
-    number?: ParsedValue;
-    type?: ParsedValue;
-    date?: ParsedValue;
-    dueDate?: ParsedValue;
-    currency?: ParsedValue;
-    version?: ParsedValue;
-  };
+export type Reference = {
+  qualifier: string;
 
-  parties: {
-    buyer?: ParsedValue;
-    supplier?: ParsedValue;
-    invoicee?: ParsedValue;
-    deliveryParty?: ParsedValue;
-    payer?: ParsedValue;
-  };
+  label: string;
 
-  references: {
-    purchaseOrder?: ParsedValue;
-    contract?: ParsedValue;
-    deliveryNote?: ParsedValue;
-    customerReference?: ParsedValue;
-  };
+  value: string;
 
-  payment: {
-    terms?: ParsedValue;
-    means?: ParsedValue;
-  };
+  segment: string;
 
-  totals: {
-    net?: ParsedValue;
-    tax?: ParsedValue;
-    gross?: ParsedValue;
-    payable?: ParsedValue;
-  };
+  line?: number;
+};
 
-  summary: {
-    segments: number;
-  };
-}
+export type DateField = {
+  qualifier: string;
+
+  label: string;
+
+  value: string;
+
+  segment: string;
+
+  line?: number;
+};
+
+export type LineItem = {
+  lineNumber: number;
+
+  segment: string;
+
+  gtin?: string;
+
+  buyerArticle?: string;
+
+  supplierArticle?: string;
+
+  description?: string;
+
+  quantity?: string;
+
+  quantityUnit?: string;
+
+  weight?: string;
+
+  price?: string;
+};
+
+export type Package = {
+  level: number;
+
+  segment: string;
+
+  sscc?: string;
+
+  packageType?: string;
+
+  weight?: string;
+
+  dimensions?: string;
+
+  lines: LineItem[];
+};

@@ -3,6 +3,7 @@
 import { EDIAnalysis } from "@/types/edi";
 import { useEditor } from "@/context/EditorContext";
 import { useState } from "react";
+import DESADVInspector from "./desadv/DESADVInspector";
 
 type Props = {
   analysis: EDIAnalysis;
@@ -11,6 +12,10 @@ type Props = {
 export default function OutputPanel({ analysis }: Props) {
   const { scrollToValue } = useEditor();
   const [activeValue, setActiveValue] = useState<string | null>(null);
+
+  if (analysis.messageType === "DESADV") {
+    return <DESADVInspector analysis={analysis} />;
+  }
 
   if (!analysis.messageType) {
     return (
