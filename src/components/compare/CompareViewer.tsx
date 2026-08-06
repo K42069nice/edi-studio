@@ -151,7 +151,11 @@ export default function CompareViewer() {
         <div className="grid grid-cols-2 gap-6">
           <CompareInputPanel
             title="File 1"
-            edi={leftDocument?.content ?? ""}
+            edi={
+              leftDocument && rightDocument
+                ? engine.leftText
+                : (leftDocument?.content ?? "")
+            }
             loadedFile={leftDocument}
             setEdi={handleLeftChange}
             onFileSelected={handleLeftFile}
@@ -163,7 +167,11 @@ export default function CompareViewer() {
 
           <CompareInputPanel
             title="File 2"
-            edi={rightDocument?.content ?? ""}
+            edi={
+              leftDocument && rightDocument
+                ? engine.rightText
+                : (rightDocument?.content ?? "")
+            }
             loadedFile={rightDocument}
             setEdi={handleRightChange}
             onFileSelected={handleRightFile}
