@@ -365,6 +365,9 @@ export default function EDIEditor({
           });
         }}
         options={{
+          glyphMargin: true,
+          lineNumbersMinChars: 1,
+          lineDecorationsWidth: 1,
           minimap: {
             enabled: false,
           },

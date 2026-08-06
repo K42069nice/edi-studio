@@ -162,11 +162,42 @@ body {
 }
 
 .diff-placeholder {
-  background: rgba(239, 68, 68, 0.28) !important;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .diff-inline-changed {
   background: rgba(255, 215, 64, 0.28);
   color: inherit !important;
   border-radius: 3px;
+}
+
+.monaco-editor .glyph-plus {
+  background: transparent !important;
+}
+
+.monaco-editor .glyph-plus::before {
+  content: "+";
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.monaco-editor .glyph-minus {
+  background: transparent !important;
+}
+
+.monaco-editor .glyph-minus::before {
+  content: "−";
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.monaco-editor .view-lines .view-line {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+  box-sizing: border-box;
+}
+
+.monaco-editor .current-line {
+  background: rgba(255,255,255,0.025) !important;
 }

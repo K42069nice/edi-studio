@@ -41,7 +41,7 @@ export function applyCompareDecorations(
         break;
 
       case "removed":
-        className = side === "left" ? "diff-added" : "diff-placeholder";
+        className = side === "left" ? "diff-removed" : "diff-placeholder";
         break;
 
       case "changed":
@@ -72,6 +72,16 @@ export function applyCompareDecorations(
       options: {
         isWholeLine: true,
         className,
+        glyphMarginClassName:
+          row.type === "added"
+            ? side === "right"
+              ? "glyph-plus"
+              : undefined
+            : row.type === "removed"
+              ? side === "left"
+                ? "glyph-minus"
+                : undefined
+              : undefined,
       },
     });
 
