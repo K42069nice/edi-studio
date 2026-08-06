@@ -1,7 +1,5 @@
 "use client";
 
-import SourceCard from "../SourceCard";
-
 type Props = {
   hasPackages: boolean;
   expanded: boolean;
@@ -27,8 +25,6 @@ export default function BottomPanel({
         ${expanded ? "grid-cols-1" : "grid-cols-[minmax(320px,540px)_1fr]"}
       `}
     >
-      {!expanded && <SourceCard />}
-
       <div
         onMouseEnter={() => {
           if (hasPackages) {

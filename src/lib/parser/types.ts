@@ -46,13 +46,13 @@ export type DateField = {
 export type LineItem = {
   lineNumber: number;
 
-  segment: string;
-
   gtin?: string;
 
   buyerArticle?: string;
 
   supplierArticle?: string;
+
+  internalArticle?: string;
 
   description?: string;
 
@@ -68,9 +68,11 @@ export type LineItem = {
 export type Package = {
   id: number;
 
-  level: number;
+  cps: number;
 
-  parentId?: number;
+  parentCps?: number;
+
+  level: number;
 
   sscc?: string;
 

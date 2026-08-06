@@ -172,6 +172,25 @@ export function parseEDI(content: string): EDIAnalysis {
     }
   }
 
+  messageType = ctx.messageType;
+  version = ctx.version;
+
+  documentNumber = ctx.documentNumber;
+  documentDate = ctx.documentDate;
+  dispatchDate = ctx.dispatchDate;
+  deliveryDate = ctx.deliveryDate;
+
+  buyer = ctx.buyer;
+  supplier = ctx.supplier;
+  deliveryPoint = ctx.deliveryPoint;
+  invoiceRecipient = ctx.invoiceRecipient;
+
+  orderNumber = ctx.orderNumber;
+  deliveryNote = ctx.deliveryNote;
+
+  lines = ctx.lines;
+  grossWeight = ctx.grossWeight;
+
   const sections: EDISection[] = [];
 
   switch (messageType) {
@@ -197,26 +216,35 @@ export function parseEDI(content: string): EDIAnalysis {
       });
 
       break;
+
+    case "ORDERS":
+      sections.push({
+        id: "document",
+        title: "📄 Header",
+        fields: [
+          field("Order Number", documentNumber, "BGM"),
+          field("Order Date", documentDate, "DTM", "137"),
+          field("Version", version, "UNH"),
+        ],
+      });
+
+      sections.push({
+        id: "parties",
+        title: "👥 Parties",
+        fields: [
+          field("Buyer", buyer, "NAD", "BY"),
+          field("Supplier", supplier, "NAD", "SU"),
+        ],
+      });
+
+      sections.push({
+        id: "references",
+        title: "🔗 References",
+        fields: [field("Customer Order", orderNumber, "RFF", "ON")],
+      });
+
+      break;
   }
-
-  messageType = ctx.messageType;
-  version = ctx.version;
-
-  documentNumber = ctx.documentNumber;
-  documentDate = ctx.documentDate;
-  dispatchDate = ctx.dispatchDate;
-  deliveryDate = ctx.deliveryDate;
-
-  buyer = ctx.buyer;
-  supplier = ctx.supplier;
-  deliveryPoint = ctx.deliveryPoint;
-  invoiceRecipient = ctx.invoiceRecipient;
-
-  orderNumber = ctx.orderNumber;
-  deliveryNote = ctx.deliveryNote;
-
-  lines = ctx.lines;
-  grossWeight = ctx.grossWeight;
 
   return {
     messageType,
@@ -253,5 +281,6 @@ export function parseEDI(content: string): EDIAnalysis {
     dates: ctx.dates,
 
     packages: ctx.packages,
+    workspace: [],
   };
 }

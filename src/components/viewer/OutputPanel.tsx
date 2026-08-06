@@ -1,7 +1,10 @@
 "use client";
 
 import { EDIAnalysis } from "@/types/edi";
+
 import DESADVInspector from "./inspectors/desadv/DESADVInspector";
+import ORDERSInspector from "./inspectors/orders/ORDERSInspector";
+
 import InspectorSection from "./inspectors/shared/InspectorSection";
 import SummaryCard from "./inspectors/shared/SummaryCard";
 
@@ -10,10 +13,6 @@ type Props = {
 };
 
 export default function OutputPanel({ analysis }: Props) {
-  if (analysis.messageType === "DESADV") {
-    return <DESADVInspector analysis={analysis} />;
-  }
-
   if (!analysis.messageType) {
     return (
       <div className="h-full rounded-xl border border-zinc-800 bg-zinc-900">
@@ -30,8 +29,7 @@ export default function OutputPanel({ analysis }: Props) {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Open or drag an EDIFACT file into the editor to inspect its
-              contents.
+              Open or drag an EDIFACT file into the editor.
             </p>
           </div>
         </div>
@@ -39,22 +37,31 @@ export default function OutputPanel({ analysis }: Props) {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Inspector Header */}
+  switch (analysis.messageType) {
+    case "DESADV":
+      return <DESADVInspector analysis={analysis} />;
 
-      <SummaryCard
-        messageType={analysis.messageType}
-        version={analysis.version}
-        segments={analysis.segments}
-        status={analysis.status}
-      />
+    case "ORDERS":
+      return <ORDERSInspector analysis={analysis} />;
 
-      {/* Dynamic Sections */}
+    default:
+      return (
+        <div className="space-y-4">
+          <SummaryCard
+            messageType={analysis.messageType}
+            version={analysis.version}
+            segments={analysis.segments}
+            status={analysis.status}
+          />
 
-      {analysis.sections.map((section) => (
-        <InspectorSection key={section.id} section={section} />
-      ))}
-    </div>
-  );
+          {analysis.sections.map((section) => (
+            <InspectorSection
+              key={section.id}
+              title={section.title}
+              fields={section.fields}
+            />
+          ))}
+        </div>
+      );
+  }
 }

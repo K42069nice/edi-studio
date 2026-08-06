@@ -1,31 +1,34 @@
 import { ParserContext } from "../context";
 
 export function parseCPS(parts: string[], ctx: ParserContext) {
-  const level = Number(parts[1]);
-
-  while (
-    ctx.packageStack.length &&
-    ctx.packageStack[ctx.packageStack.length - 1].level >= level
-  ) {
-    ctx.packageStack.pop();
-  }
-
-  const parent = ctx.packageStack.at(-1);
+  const cps = Number(parts[1]);
+  const parentCps = parts[2] ? Number(parts[2]) : undefined;
 
   const pkg = {
     id: ctx.nextPackageId++,
-    level,
-    parentId: parent?.id,
+
+    cps,
+    parentCps,
+
+    level: parentCps ? 2 : 1,
+
     lines: [],
     children: [],
   };
 
-  if (parent) {
-    parent.children.push(pkg);
+  ctx.packageMap.set(cps, pkg);
+
+  if (parentCps != null) {
+    const parent = ctx.packageMap.get(parentCps);
+
+    if (parent) {
+      parent.children.push(pkg);
+    } else {
+      ctx.packages.push(pkg);
+    }
   } else {
     ctx.packages.push(pkg);
   }
 
-  ctx.packageStack.push(pkg);
   ctx.currentPackage = pkg;
 }

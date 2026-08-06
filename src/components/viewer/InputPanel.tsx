@@ -3,7 +3,6 @@
 import { LoadedFile } from "@/types/file";
 
 import EDIEditor from "../editor/EDIEditor";
-import FileCard from "../upload/FileCard";
 
 type Props = {
   edi: string;
@@ -52,12 +51,6 @@ export default function InputPanel({
         onChange={setEdi}
         onFileSelected={onFileSelected}
       />
-
-      {loadedFile && (
-        <div className="mt-4">
-          <FileCard file={loadedFile} />
-        </div>
-      )}
     </section>
   );
 }

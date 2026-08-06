@@ -4,7 +4,7 @@ import { EDIAnalysis } from "@/types/edi";
 
 export function parseDocument(
   messageType: string,
-  content: string
+  content: string,
 ): EDIAnalysis {
   switch (messageType) {
     case "INVOIC":
@@ -14,9 +14,29 @@ export function parseDocument(
       return {
         messageType,
         version: null,
+
         sections: [],
+
         segments: 0,
         status: "Unsupported message type",
+
+        document: {},
+
+        references: {},
+
+        parties: {},
+
+        lines: [],
+
+        partiesList: [],
+
+        referencesList: [],
+
+        dates: [],
+
+        packages: [],
+
+        workspace: [],
       };
   }
 }

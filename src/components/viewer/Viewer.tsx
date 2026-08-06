@@ -48,8 +48,11 @@ export default function Viewer() {
     dates: [],
 
     packages: [],
+
+    workspace: [],
   });
-  const hasPackages = analysis.packages.length > 0;
+  const hasWorkspace =
+    analysis.packages.length > 0 || analysis.lines.length > 0;
 
   const [packagesExpanded, setPackagesExpanded] = useState(true);
 
@@ -79,6 +82,8 @@ export default function Viewer() {
         dates: [],
 
         packages: [],
+
+        workspace: [],
       });
 
       return;
@@ -132,7 +137,7 @@ export default function Viewer() {
 
           {/* Bottom workspace (coming next) */}
 
-          {hasPackages && (
+          {hasWorkspace && (
             <div
               className={`
                         overflow-hidden
@@ -146,7 +151,9 @@ export default function Viewer() {
                       `}
             >
               <PackagesWorkspace
+                messageType={analysis.messageType}
                 packages={analysis.packages}
+                lines={analysis.lines}
                 expanded={packagesExpanded}
                 onToggle={() => setPackagesExpanded((v) => !v)}
               />

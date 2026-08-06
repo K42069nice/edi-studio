@@ -20,6 +20,7 @@ export type ParserContext = {
   deliveryNote: string | null;
 
   packageStack: Package[];
+  packageMap: Map<number, Package>;
   packageCount: number;
   palletCount: number;
   ssccCount: number;
@@ -76,5 +77,6 @@ export function createParserContext(): ParserContext {
     dates: [],
 
     packages: [],
+    packageMap: new Map(),
   };
 }
