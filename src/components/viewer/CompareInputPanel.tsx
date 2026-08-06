@@ -4,7 +4,6 @@ import { Document } from "@/types/document";
 import { CompareRow } from "../compare/compareEngine";
 
 import EDIEditor from "../editor/EDIEditor";
-import FileCard from "../upload/FileCard";
 
 type Props = {
   title: string;
@@ -59,12 +58,6 @@ export default function CompareInputPanel({
         side={side}
         syncScroll={syncScroll}
       />
-
-      {loadedFile && (
-        <div className="mt-4">
-          <FileCard file={loadedFile} />
-        </div>
-      )}
     </section>
   );
 }
