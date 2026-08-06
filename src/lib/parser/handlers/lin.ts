@@ -10,4 +10,8 @@ export function parseLIN(parts: string[], ctx: ParserContext) {
   }
 
   ctx.lines.push(ctx.currentLine);
+
+  if (ctx.currentPackage) {
+    ctx.currentPackage.lines.push(ctx.currentLine);
+  }
 }

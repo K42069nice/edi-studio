@@ -11,6 +11,8 @@ import { parseQTY } from "@/lib/parser/handlers/qty";
 import { parseMEA } from "@/lib/parser/handlers/mea";
 import { parsePRI } from "@/lib/parser/handlers/pri";
 import { parseIMD } from "@/lib/parser/handlers/imd";
+import { parseCPS } from "@/lib/parser/handlers/cps";
+import { parseGIN } from "@/lib/parser/handlers/gin";
 
 function formatDate(value: string | null): string | null {
   if (!value || value.length !== 8) {
@@ -123,6 +125,11 @@ export function parseEDI(content: string): EDIAnalysis {
         break;
       }
 
+      case "CPS": {
+        parseCPS(parts, ctx);
+        break;
+      }
+
       case "PAC":
         packageCount++;
 
@@ -133,7 +140,7 @@ export function parseEDI(content: string): EDIAnalysis {
         break;
 
       case "GIN":
-        ssccCount++;
+        parseGIN(parts, ctx);
         break;
 
       case "LIN": {

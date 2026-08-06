@@ -27,6 +27,8 @@ export type ParserContext = {
   lines: EDILine[];
   currentLine: EDILine | null;
 
+  currentPackage: Package | null;
+
   partiesList: Party[];
 
   referencesList: Reference[];
@@ -62,6 +64,7 @@ export function createParserContext(): ParserContext {
 
     lines: [],
     currentLine: null,
+    currentPackage: null,
     partiesList: [],
 
     referencesList: [],

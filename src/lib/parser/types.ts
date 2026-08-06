@@ -68,8 +68,6 @@ export type LineItem = {
 export type Package = {
   level: number;
 
-  segment: string;
-
   sscc?: string;
 
   packageType?: string;
