@@ -19,6 +19,7 @@ export type ParserContext = {
   orderNumber: string | null;
   deliveryNote: string | null;
 
+  packageStack: Package[];
   packageCount: number;
   palletCount: number;
   ssccCount: number;
@@ -28,6 +29,8 @@ export type ParserContext = {
   currentLine: EDILine | null;
 
   currentPackage: Package | null;
+
+  nextPackageId: number;
 
   partiesList: Party[];
 
@@ -56,7 +59,7 @@ export function createParserContext(): ParserContext {
 
     orderNumber: null,
     deliveryNote: null,
-
+    packageStack: [],
     packageCount: 0,
     palletCount: 0,
     ssccCount: 0,
@@ -65,6 +68,7 @@ export function createParserContext(): ParserContext {
     lines: [],
     currentLine: null,
     currentPackage: null,
+    nextPackageId: 1,
     partiesList: [],
 
     referencesList: [],

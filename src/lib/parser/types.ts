@@ -66,15 +66,21 @@ export type LineItem = {
 };
 
 export type Package = {
+  id: number;
+
   level: number;
+
+  parentId?: number;
 
   sscc?: string;
 
   packageType?: string;
 
+  quantity?: number;
+
   weight?: string;
 
-  dimensions?: string;
-
   lines: LineItem[];
+
+  children: Package[];
 };

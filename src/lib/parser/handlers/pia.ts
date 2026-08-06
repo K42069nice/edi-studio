@@ -13,6 +13,10 @@ export function parsePIA(parts: string[], ctx: ParserContext) {
       ctx.currentLine.buyerArticle = article;
       break;
 
+    case "IN":
+      ctx.currentLine.internalArticle = article;
+      break;
+
     case "SA":
       ctx.currentLine.supplierArticle = article;
       break;

@@ -17,7 +17,7 @@ export default function OutputPanel({ analysis }: Props) {
   if (!analysis.messageType) {
     return (
       <div className="h-full rounded-xl border border-zinc-800 bg-zinc-900">
-        <div className="border-b border-zinc-800 px-5 py-4">
+        <div className="border-b border-zinc-800 px-4 py-2">
           <h2 className="text-lg font-semibold text-white">Inspector</h2>
         </div>
 

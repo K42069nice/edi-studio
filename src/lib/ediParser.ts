@@ -13,6 +13,7 @@ import { parsePRI } from "@/lib/parser/handlers/pri";
 import { parseIMD } from "@/lib/parser/handlers/imd";
 import { parseCPS } from "@/lib/parser/handlers/cps";
 import { parseGIN } from "@/lib/parser/handlers/gin";
+import { parsePAC } from "@/lib/parser/handlers/pac";
 
 function formatDate(value: string | null): string | null {
   if (!value || value.length !== 8) {
@@ -130,14 +131,10 @@ export function parseEDI(content: string): EDIAnalysis {
         break;
       }
 
-      case "PAC":
-        packageCount++;
-
-        if (parts[2]?.startsWith("201")) {
-          palletCount++;
-        }
-
+      case "PAC": {
+        parsePAC(parts, ctx);
         break;
+      }
 
       case "GIN":
         parseGIN(parts, ctx);
@@ -196,45 +193,6 @@ export function parseEDI(content: string): EDIAnalysis {
         fields: [
           field("Buyer", buyer, "NAD", "BY"),
           field("Supplier", supplier, "NAD", "SU"),
-        ],
-      });
-
-      break;
-
-    case "DESADV":
-      sections.push({
-        id: "document",
-        title: "📄 Header",
-        fields: [
-          field("Despatch Advice", documentNumber, "BGM"),
-          field("Document Date", documentDate, "DTM", "137"),
-          field("Dispatch Date", dispatchDate, "DTM", "11"),
-          field("Delivery Date", deliveryDate, "DTM", "17"),
-          field("Order Number", orderNumber, "RFF", "ON"),
-          field("Delivery Note", deliveryNote, "RFF", "DQ"),
-          field("Version", version, "UNH"),
-        ],
-      });
-
-      sections.push({
-        id: "parties",
-        title: "👥 Parties",
-        fields: [
-          field("Buyer", buyer, "NAD", "BY"),
-          field("Supplier", supplier, "NAD", "SU"),
-          field("Delivery Point", deliveryPoint, "NAD", "DP"),
-          field("Invoice Recipient", invoiceRecipient, "NAD", "IV"),
-        ],
-      });
-
-      sections.push({
-        id: "logistics",
-        title: "📦 Packaging",
-        fields: [
-          field("Packages", String(packageCount), "PAC"),
-          field("Pallets", String(palletCount), "PAC"),
-          field("SSCC Labels", String(ssccCount), "GIN"),
-          field("Gross Weight", grossWeight, "MEA"),
         ],
       });
 

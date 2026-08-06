@@ -1,4 +1,5 @@
 import type { Party, Reference, DateField, Package } from "@/lib/parser/types";
+import type { WorkspaceNode } from "./workspace";
 
 export type EDIField = {
   label: string;
@@ -22,6 +23,7 @@ export type EDILine = {
   gtin?: string;
   buyerArticle?: string;
   supplierArticle?: string;
+  internalArticle?: string;
 
   quantity?: string;
   quantityUnit?: string;
@@ -64,11 +66,13 @@ export type EDIAnalysis = {
 
   lines: EDILine[];
 
-  partiesList?: Party[];
+  partiesList: Party[];
 
-  referencesList?: Reference[];
+  referencesList: Reference[];
 
-  dates?: DateField[];
+  dates: DateField[];
 
-  packages?: Package[];
+  packages: Package[];
+
+  workspace: WorkspaceNode[];
 };

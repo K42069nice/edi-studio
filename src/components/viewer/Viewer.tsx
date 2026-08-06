@@ -15,6 +15,8 @@ import { EDIAnalysis } from "@/types/edi";
 import { detectFileType } from "@/lib/file/detectFileType";
 import { parseEDI } from "@/lib/ediParser";
 
+import PackagesWorkspace from "./workspace/PackagesWorkspace";
+
 export default function Viewer() {
   const [edi, setEdi] = useState("");
 
@@ -25,19 +27,58 @@ export default function Viewer() {
   const [analysis, setAnalysis] = useState<EDIAnalysis>({
     messageType: "",
     version: null,
+
     sections: [],
+
     segments: 0,
     status: "",
+
+    document: {},
+
+    references: {},
+
+    parties: {},
+
+    lines: [],
+
+    partiesList: [],
+
+    referencesList: [],
+
+    dates: [],
+
+    packages: [],
   });
+  const hasPackages = analysis.packages.length > 0;
+
+  const [packagesExpanded, setPackagesExpanded] = useState(true);
 
   useEffect(() => {
     if (!edi.trim()) {
       setAnalysis({
         messageType: "",
         version: null,
+
         sections: [],
+
         segments: 0,
         status: "",
+
+        document: {},
+
+        references: {},
+
+        parties: {},
+
+        lines: [],
+
+        partiesList: [],
+
+        referencesList: [],
+
+        dates: [],
+
+        packages: [],
       });
 
       return;
@@ -75,15 +116,42 @@ export default function Viewer() {
 
         <TopNavigation loadedFile={loadedFile} />
 
-        <div className="grid grid-cols-2 gap-6 p-8">
-          <InputPanel
-            edi={edi}
-            setEdi={(value) => setEdi(formatEDI(value))}
-            onFileSelected={handleFileSelected}
-            loadedFile={loadedFile}
-          />
+        <div className="space-y-6 p-8">
+          {/* Top workspace */}
 
-          <OutputPanel analysis={analysis} />
+          <div className="grid grid-cols-2 gap-6">
+            <InputPanel
+              edi={edi}
+              setEdi={(value) => setEdi(formatEDI(value))}
+              onFileSelected={handleFileSelected}
+              loadedFile={loadedFile}
+            />
+
+            <OutputPanel analysis={analysis} />
+          </div>
+
+          {/* Bottom workspace (coming next) */}
+
+          {hasPackages && (
+            <div
+              className={`
+                        overflow-hidden
+                        rounded-xl
+                        border
+                        border-zinc-800
+                        bg-zinc-900
+                        transition-all
+                        duration-300
+                        ${packagesExpanded ? "h-[68vh]" : "h-16"}
+                      `}
+            >
+              <PackagesWorkspace
+                packages={analysis.packages}
+                expanded={packagesExpanded}
+                onToggle={() => setPackagesExpanded((v) => !v)}
+              />
+            </div>
+          )}
         </div>
       </main>
     </EditorProvider>
