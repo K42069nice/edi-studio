@@ -28,7 +28,13 @@ export function splitSegments(content: string): string[] {
     .filter(Boolean)
     .map((x) => x + "'");
 }
-
 export function formatEDI(content: string): string {
-  return splitSegments(content).join("\n");
+  const normalized = normalizeEDI(content);
+
+  // Уже отформатирован
+  if (normalized.includes("\n")) {
+    return normalized;
+  }
+
+  return splitSegments(normalized).join("\n");
 }
