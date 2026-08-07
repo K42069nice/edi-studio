@@ -235,6 +235,24 @@ export default function EDIEditor({
           isInternalUpdate.current = false;
 
           onChange(value ?? "");
+          if (mode === "viewer") {
+            requestAnimationFrame(() => {
+              const monaco = (
+                window as typeof window & {
+                  monaco?: typeof import("monaco-editor");
+                }
+              ).monaco;
+
+              if (editorRef.current && monaco) {
+                updateSegmentDecorations(
+                  editorRef.current,
+                  monaco,
+                  pinnedSegments.current,
+                  disabledSegments.current,
+                );
+              }
+            });
+          }
         }}
         onMount={(editor, monaco) => {
           const model = monaco.editor.createModel("", "plaintext");

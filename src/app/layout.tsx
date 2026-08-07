@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "edi-studio",
-  description: "EDIFACT viewer and editor",
+  description: "EDI Viewer",
 };
 
 export default function RootLayout({
