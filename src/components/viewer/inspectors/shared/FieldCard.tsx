@@ -7,9 +7,18 @@ type Props = {
   label: string;
   value?: string;
   segment?: string;
+
+  // Optional value used only when searching inside Monaco.
+  // If omitted, the displayed value is used as before.
+  searchValue?: string;
 };
 
-export default function FieldCard({ label, value, segment }: Props) {
+export default function FieldCard({
+  label,
+  value,
+  segment,
+  searchValue,
+}: Props) {
   const { scrollToValue } = useEditor();
 
   const [active, setActive] = useState(false);
@@ -17,6 +26,8 @@ export default function FieldCard({ label, value, segment }: Props) {
   if (!value) {
     return null;
   }
+
+  const targetValue = searchValue ?? value;
 
   return (
     <div
@@ -64,7 +75,7 @@ export default function FieldCard({ label, value, segment }: Props) {
       <button
         type="button"
         onClick={() => {
-          scrollToValue(value);
+          scrollToValue(targetValue);
 
           setActive(true);
 

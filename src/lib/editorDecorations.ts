@@ -40,9 +40,8 @@ export function updateSegmentDecorations(
   editorInstance: editor.IStandaloneCodeEditor,
   monaco: typeof import("monaco-editor"),
   pinnedSegments: Map<string, string> = new Map(),
-  disabledSegments: Set<string> = new Set()
-)
-{
+  disabledSegments: Set<string> = new Set(),
+) {
   const model = editorInstance.getModel();
 
   if (!model) return;
@@ -64,13 +63,13 @@ export function updateSegmentDecorations(
 
     let css: string | undefined;
 
-      if (disabledSegments.has(tag)) {
-        css = undefined;
-      } else if (pinnedSegments.has(tag)) {
-        css = PIN_COLORS[tag] ?? "pin-green";
-      } else {
-        css = COLORS[tag];
-      }
+    if (disabledSegments.has(tag)) {
+      css = undefined;
+    } else if (pinnedSegments.has(tag)) {
+      css = PIN_COLORS[tag] ?? "pin-green";
+    } else {
+      css = COLORS[tag];
+    }
 
     if (!css) continue;
 
@@ -83,4 +82,14 @@ export function updateSegmentDecorations(
   }
 
   decorations.set(items);
+}
+
+/*
+ * Removes all EDIFACT segment decorations.
+ *
+ * Used when the editor switches to another document type
+ * such as XML.
+ */
+export function clearSegmentDecorations() {
+  decorations?.clear();
 }

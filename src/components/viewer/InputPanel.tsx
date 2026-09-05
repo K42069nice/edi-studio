@@ -4,6 +4,8 @@ import { LoadedFile } from "@/types/file";
 
 import EDIEditor from "../editor/EDIEditor";
 
+import { detectFileType } from "@/lib/file/detectFileType";
+
 type Props = {
   edi: string;
   loadedFile: LoadedFile | null;
@@ -17,12 +19,14 @@ export default function InputPanel({
   setEdi,
   onFileSelected,
 }: Props) {
+  const detectedType = detectFileType(edi);
+  const contentType = loadedFile?.type ?? detectedType;
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900 p-6">
       <div className="mb-4 flex items-center gap-3">
         <h2 className="text-xl font-semibold text-white">Input</h2>
 
-        {loadedFile?.type === "EDIFACT" && (
+        {contentType === "EDIFACT" && (
           <span
             className="
               rounded-md
@@ -44,13 +48,33 @@ export default function InputPanel({
             edifact
           </span>
         )}
+        {contentType === "XML" && (
+          <span
+            className="
+      rounded-md
+      border
+      border-sky-400/20
+      bg-sky-400/[0.06]
+      px-2.5
+      py-0.5
+      text-sm
+      font-black
+      tracking-tight
+      text-sky-300
+      select-none
+    "
+          >
+            xml
+          </span>
+        )}
       </div>
-
-      <EDIEditor
-        value={edi}
-        onChange={setEdi}
-        onFileSelected={onFileSelected}
-      />
+      {
+        <EDIEditor
+          value={edi}
+          onChange={setEdi}
+          onFileSelected={onFileSelected}
+        />
+      }
     </section>
   );
 }

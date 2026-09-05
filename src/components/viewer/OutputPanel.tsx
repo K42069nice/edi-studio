@@ -1,18 +1,34 @@
 "use client";
 
 import { EDIAnalysis } from "@/types/edi";
+import { PeppolInvoiceAnalysis } from "@/types/peppol";
 
 import DESADVInspector from "./inspectors/desadv/DESADVInspector";
 import ORDERSInspector from "./inspectors/orders/ORDERSInspector";
+import PeppolInvoiceInspector from "./inspectors/peppol/PeppolInvoiceInspector";
 
 import InspectorSection from "./inspectors/shared/InspectorSection";
 import SummaryCard from "./inspectors/shared/SummaryCard";
 
 type Props = {
   analysis: EDIAnalysis;
+  peppolAnalysis?: PeppolInvoiceAnalysis | null;
 };
 
-export default function OutputPanel({ analysis }: Props) {
+export default function OutputPanel({ analysis, peppolAnalysis }: Props) {
+  /*
+   * XML / PEPPOL
+   *
+   * If a Peppol invoice has been detected, use the dedicated
+   * Peppol inspector instead of the EDIFACT inspector.
+   */
+  if (peppolAnalysis) {
+    return <PeppolInvoiceInspector analysis={peppolAnalysis} />;
+  }
+
+  /*
+   * EMPTY STATE
+   */
   if (!analysis.messageType) {
     return (
       <div className="h-full rounded-xl border border-zinc-800 bg-zinc-900">
@@ -29,7 +45,7 @@ export default function OutputPanel({ analysis }: Props) {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Open or drag an EDIFACT file into the editor.
+              Open, paste or drag an EDIFACT or XML file into the editor.
             </p>
           </div>
         </div>
@@ -37,6 +53,9 @@ export default function OutputPanel({ analysis }: Props) {
     );
   }
 
+  /*
+   * EDIFACT
+   */
   switch (analysis.messageType) {
     case "DESADV":
       return <DESADVInspector analysis={analysis} />;

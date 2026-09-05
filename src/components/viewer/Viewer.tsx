@@ -1,21 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatEDI } from "@/lib/ediFormatter";
 
 import { EditorProvider } from "@/context/EditorContext";
 
 import TopNavigation from "./TopNavigation";
 import InputPanel from "./InputPanel";
 import OutputPanel from "./OutputPanel";
+import PackagesWorkspace from "./workspace/PackagesWorkspace";
 
 import { LoadedFile } from "@/types/file";
 import { EDIAnalysis } from "@/types/edi";
+import { PeppolInvoiceAnalysis } from "@/types/peppol";
 
 import { detectFileType } from "@/lib/file/detectFileType";
+
+import { formatEDI } from "@/lib/ediFormatter";
 import { parseEDI } from "@/lib/ediParser";
 
-import PackagesWorkspace from "./workspace/PackagesWorkspace";
+import { formatXml } from "@/lib/xml/formatXML";
+import { parsePeppolInvoice } from "@/lib/peppol/parsePeppolInvoice";
+
+const emptyAnalysis: EDIAnalysis = {
+  messageType: "",
+  version: null,
+
+  sections: [],
+
+  segments: 0,
+  status: "",
+
+  document: {},
+
+  references: {},
+
+  parties: {},
+
+  lines: [],
+
+  partiesList: [],
+
+  referencesList: [],
+
+  dates: [],
+
+  packages: [],
+
+  workspace: [],
+};
 
 export default function Viewer() {
   const [edi, setEdi] = useState("");
@@ -24,83 +56,94 @@ export default function Viewer() {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const [analysis, setAnalysis] = useState<EDIAnalysis>({
-    messageType: "",
-    version: null,
+  const [analysis, setAnalysis] = useState<EDIAnalysis>(emptyAnalysis);
 
-    sections: [],
-
-    segments: 0,
-    status: "",
-
-    document: {},
-
-    references: {},
-
-    parties: {},
-
-    lines: [],
-
-    partiesList: [],
-
-    referencesList: [],
-
-    dates: [],
-
-    packages: [],
-
-    workspace: [],
-  });
-  const hasWorkspace =
-    analysis.packages.length > 0 || analysis.lines.length > 0;
+  const [peppolAnalysis, setPeppolAnalysis] =
+    useState<PeppolInvoiceAnalysis | null>(null);
 
   const [packagesExpanded, setPackagesExpanded] = useState(true);
 
+  const hasWorkspace =
+    analysis.packages.length > 0 || analysis.lines.length > 0;
+
+  /*
+   * Analyse the document depending on its detected format.
+   *
+   * EDIFACT and XML/Peppol are deliberately kept separate.
+   */
   useEffect(() => {
     if (!edi.trim()) {
-      setAnalysis({
-        messageType: "",
-        version: null,
-
-        sections: [],
-
-        segments: 0,
-        status: "",
-
-        document: {},
-
-        references: {},
-
-        parties: {},
-
-        lines: [],
-
-        partiesList: [],
-
-        referencesList: [],
-
-        dates: [],
-
-        packages: [],
-
-        workspace: [],
-      });
+      setAnalysis(emptyAnalysis);
+      setPeppolAnalysis(null);
 
       return;
     }
 
-    setAnalysis(parseEDI(edi));
+    const type = detectFileType(edi);
+
+    /*
+     * XML / PEPPOL
+     */
+    if (type === "XML") {
+      const peppol = parsePeppolInvoice(edi);
+
+      setPeppolAnalysis(peppol);
+
+      // Prevent old EDIFACT information from remaining visible.
+      setAnalysis(emptyAnalysis);
+
+      return;
+    }
+
+    /*
+     * EDIFACT
+     */
+    if (type === "EDIFACT") {
+      setPeppolAnalysis(null);
+      setAnalysis(parseEDI(edi));
+
+      return;
+    }
+
+    /*
+     * Unknown format
+     */
+    setPeppolAnalysis(null);
+    setAnalysis(emptyAnalysis);
   }, [edi]);
 
+  /*
+   * Format content according to document type.
+   */
+  function formatContent(content: string): string {
+    const type = detectFileType(content);
+
+    if (type === "EDIFACT") {
+      return formatEDI(content);
+    }
+
+    if (type === "XML") {
+      return formatXml(content);
+    }
+
+    return content;
+  }
+
+  /*
+   * Handle files opened through browse / drag & drop.
+   */
   async function handleFileSelected(file: File) {
-    const content = formatEDI(await file.text());
+    const rawContent = await file.text();
+
+    const type = detectFileType(rawContent);
+    const content = formatContent(rawContent);
 
     setEdi(content);
 
     setLoadedFile({
       name: file.name || "Untitled",
       size: file.size,
-      type: detectFileType(content),
+      type,
     });
 
     setShowSuccess(true);
@@ -127,35 +170,35 @@ export default function Viewer() {
           <div className="grid grid-cols-2 gap-6">
             <InputPanel
               edi={edi}
-              setEdi={(value) => setEdi(formatEDI(value))}
+              setEdi={(value) => setEdi(formatContent(value))}
               onFileSelected={handleFileSelected}
               loadedFile={loadedFile}
             />
 
-            <OutputPanel analysis={analysis} />
+            <OutputPanel analysis={analysis} peppolAnalysis={peppolAnalysis} />
           </div>
 
-          {/* Bottom workspace (coming next) */}
+          {/* EDIFACT workspace */}
 
           {hasWorkspace && (
             <div
               className={`
-                        overflow-hidden
-                        rounded-xl
-                        border
-                        border-zinc-800
-                        bg-zinc-900
-                        transition-all
-                        duration-300
-                        ${packagesExpanded ? "h-[68vh]" : "h-16"}
-                      `}
+                overflow-hidden
+                rounded-xl
+                border
+                border-zinc-800
+                bg-zinc-900
+                transition-all
+                duration-300
+                ${packagesExpanded ? "h-[68vh]" : "h-16"}
+              `}
             >
               <PackagesWorkspace
                 messageType={analysis.messageType}
                 packages={analysis.packages}
                 lines={analysis.lines}
                 expanded={packagesExpanded}
-                onToggle={() => setPackagesExpanded((v) => !v)}
+                onToggle={() => setPackagesExpanded((value) => !value)}
               />
             </div>
           )}

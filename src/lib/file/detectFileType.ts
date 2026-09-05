@@ -11,7 +11,7 @@ export function detectFileType(content: string): LoadedFile["type"] {
     return "EDIFACT";
   }
 
-  if (text.startsWith("<?xml")) {
+  if (text.startsWith("<?xml") || text.startsWith("<")) {
     return "XML";
   }
 

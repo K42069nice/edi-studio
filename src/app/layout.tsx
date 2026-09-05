@@ -13,8 +13,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "edi-studio",
-  description: "EDI Viewer",
+  metadataBase: new URL("https://edi-studio.dev"),
+
+  title: {
+    default: "Free EDI Viewer & EDIFACT Parser | EDI Studio",
+    template: "%s | EDI Studio",
+  },
+
+  description:
+    "Free online EDI viewer and EDIFACT parser. View and analyze EDIFACT messages, Peppol invoices and UBL XML documents directly in your browser.",
+
+  alternates: {
+    canonical: "/",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
+
+  openGraph: {
+    title: "Free EDI Viewer & EDIFACT Parser | EDI Studio",
+    description:
+      "View and analyze EDIFACT messages, Peppol invoices and UBL XML documents online.",
+    url: "https://edi-studio.dev",
+    siteName: "EDI Studio",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary",
+    title: "Free EDI Viewer & EDIFACT Parser | EDI Studio",
+    description:
+      "View and analyze EDIFACT messages, Peppol invoices and UBL XML documents online.",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +59,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

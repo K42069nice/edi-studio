@@ -1,14 +1,19 @@
 "use client";
 
-import Editor, { OnMount } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 import { useEditor } from "@/context/EditorContext";
 import { EDIFACT_SEGMENTS } from "@/lib/edifactSegments";
 import { useEffect, useRef, useState } from "react";
 import type { editor } from "monaco-editor";
-import { updateSegmentDecorations } from "@/lib/editorDecorations";
+import {
+  updateSegmentDecorations,
+  clearSegmentDecorations,
+} from "@/lib/editorDecorations";
 import EditorPlaceholder from "../upload/EditorPlaceholder";
 import { CompareRow } from "@/components/compare/compareEngine";
 import { applyCompareDecorations } from "@/components/compare/compareDecorations";
+import { detectFileType } from "@/lib/file/detectFileType";
+import { registerXmlTheme } from "@/lib/xml/xmlTheme";
 
 type Props = {
   value: string;
@@ -19,6 +24,7 @@ type Props = {
   side?: "left" | "right";
   syncScroll?: boolean;
 };
+
 export default function EDIEditor({
   value,
   onChange,
@@ -29,21 +35,27 @@ export default function EDIEditor({
   syncScroll = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const isSyncing = useRef(false);
-  const isUserTyping = useRef(false);
+
+  const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
+
   const ignoreNextChange = useRef(false);
   const isInternalUpdate = useRef(false);
   const syncScrollRef = useRef(syncScroll);
+
   const highlightDecorations =
     useRef<editor.IEditorDecorationsCollection | null>(null);
+
   const flashDecorations = useRef<editor.IEditorDecorationsCollection | null>(
     null,
   );
+
   const pinnedSegments = useRef(new Map<string, string>());
   const disabledSegments = useRef(new Set<string>());
 
   const [isDragActive, setIsDragActive] = useState(false);
+
   const { registerScrollFunction } = useEditor();
 
   function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
@@ -93,11 +105,7 @@ export default function EDIEditor({
     if (file) {
       event.preventDefault();
       onFileSelected(file);
-      return;
     }
-
-    // Для обычного текста ничего не делаем.
-    // Monaco сам обработает вставку.
   }
 
   function handleBrowse() {
@@ -106,14 +114,21 @@ export default function EDIEditor({
 
   function scrollToValue(value: string) {
     const editor = editorRef.current;
+
     if (!editor) return;
+
     const model = editor.getModel();
+
     if (!model) return;
+
     const matches = model.findMatches(value, false, false, false, null, false);
+
     if (!matches.length) return;
+
     editor.revealRangeInCenter(matches[0].range);
     editor.setSelection(matches[0].range);
     editor.focus();
+
     if (flashDecorations.current) {
       flashDecorations.current.set([
         {
@@ -130,6 +145,10 @@ export default function EDIEditor({
     }
   }
 
+  /*
+   * Synchronise external value changes with the existing
+   * Monaco model without recreating the editor.
+   */
   useEffect(() => {
     const editor = editorRef.current;
 
@@ -155,6 +174,7 @@ export default function EDIEditor({
     const scrollLeft = editor.getScrollLeft();
 
     editor.pushUndoStop();
+
     model.pushEditOperations(
       [],
       [
@@ -180,30 +200,70 @@ export default function EDIEditor({
     });
   }, [value]);
 
+  /*
+   * Switch the existing Monaco model between EDIFACT/plaintext
+   * and XML. The editor itself is NEVER recreated.
+   */
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    if (!editor || !monaco) return;
+
+    const model = editor.getModel();
+
+    if (!model) return;
+
+    const type = detectFileType(value);
+
+    if (type !== "EDIFACT") {
+      clearSegmentDecorations();
+      highlightDecorations.current?.clear();
+    }
+
+    if (type === "XML") {
+      if (model.getLanguageId() !== "xml") {
+        monaco.editor.setModelLanguage(model, "xml");
+      }
+
+      monaco.editor.setTheme("edi-studio-xml");
+
+      return;
+    }
+
+    if (model.getLanguageId() !== "plaintext") {
+      monaco.editor.setModelLanguage(model, "plaintext");
+    }
+
+    monaco.editor.setTheme("vs-dark");
+
+    if (type === "EDIFACT" && mode === "viewer") {
+      updateSegmentDecorations(
+        editor,
+        monaco,
+        pinnedSegments.current,
+        disabledSegments.current,
+      );
+    }
+  }, [value, mode]);
+
   useEffect(() => {
     registerScrollFunction(scrollToValue);
   }, [registerScrollFunction]);
 
   useEffect(() => {
     syncScrollRef.current = syncScroll;
-    console.log("syncScroll =", syncScroll);
   }, [syncScroll]);
 
   useEffect(() => {
     if (mode !== "compare") return;
 
-    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
 
-    const monaco = (
-      window as typeof window & {
-        monaco?: typeof import("monaco-editor");
-      }
-    ).monaco;
+    if (!editor || !monaco) return;
 
-    if (!monaco) return;
-    console.log("COMPARE", diff.length, side);
-
-    applyCompareDecorations(editorRef.current, monaco, diff, side);
+    applyCompareDecorations(editor, monaco, diff, side);
   }, [diff, mode, side]);
 
   return (
@@ -218,6 +278,7 @@ export default function EDIEditor({
       `}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onPaste={handlePaste}
     >
@@ -226,7 +287,7 @@ export default function EDIEditor({
         defaultLanguage="plaintext"
         theme="vs-dark"
         defaultValue=""
-        onChange={(value) => {
+        onChange={(newValue) => {
           if (ignoreNextChange.current) {
             ignoreNextChange.current = false;
             return;
@@ -234,39 +295,62 @@ export default function EDIEditor({
 
           isInternalUpdate.current = false;
 
-          onChange(value ?? "");
-          if (mode === "viewer") {
-            requestAnimationFrame(() => {
-              const monaco = (
-                window as typeof window & {
-                  monaco?: typeof import("monaco-editor");
-                }
-              ).monaco;
+          const content = newValue ?? "";
 
-              if (editorRef.current && monaco) {
-                updateSegmentDecorations(
-                  editorRef.current,
-                  monaco,
-                  pinnedSegments.current,
-                  disabledSegments.current,
-                );
-              }
+          onChange(content);
+
+          /*
+           * EDIFACT decorations only.
+           * XML is handled entirely by Monaco's XML language/theme.
+           */
+          if (mode === "viewer" && detectFileType(content) === "EDIFACT") {
+            requestAnimationFrame(() => {
+              const editor = editorRef.current;
+              const monaco = monacoRef.current;
+
+              if (!editor || !monaco) return;
+
+              updateSegmentDecorations(
+                editor,
+                monaco,
+                pinnedSegments.current,
+                disabledSegments.current,
+              );
             });
           }
         }}
         onMount={(editor, monaco) => {
-          const model = monaco.editor.createModel("", "plaintext");
-
-          editor.setModel(model);
           editorRef.current = editor;
+          monacoRef.current = monaco;
+
+          registerXmlTheme(monaco);
+
           if (mode === "compare") {
             (window as any)[side === "left" ? "leftEditor" : "rightEditor"] =
               editor;
           }
+
           highlightDecorations.current = editor.createDecorationsCollection();
+
           flashDecorations.current = editor.createDecorationsCollection();
-          if (mode === "viewer") {
-            updateSegmentDecorations(editor, monaco, pinnedSegments.current);
+
+          const initialType = detectFileType(value);
+
+          if (initialType === "XML") {
+            const model = editor.getModel();
+
+            if (model) {
+              monaco.editor.setModelLanguage(model, "xml");
+            }
+
+            monaco.editor.setTheme("edi-studio-xml");
+          } else if (initialType === "EDIFACT" && mode === "viewer") {
+            updateSegmentDecorations(
+              editor,
+              monaco,
+              pinnedSegments.current,
+              disabledSegments.current,
+            );
           }
 
           editor.onDidScrollChange((event) => {
@@ -290,10 +374,19 @@ export default function EDIEditor({
             });
           });
 
+          /*
+           * EDIFACT segment selection highlighting.
+           * Disabled completely for XML.
+           */
           editor.onDidChangeCursorSelection(() => {
             const model = editor.getModel();
 
             if (!model || !highlightDecorations.current) return;
+
+            if (model.getLanguageId() !== "plaintext") {
+              highlightDecorations.current.clear();
+              return;
+            }
 
             const selection = editor.getSelection();
 
@@ -302,7 +395,7 @@ export default function EDIEditor({
             const text = model.getValueInRange(selection).trim();
 
             if (!EDIFACT_SEGMENTS.has(text)) {
-              highlightDecorations.current.set([]);
+              highlightDecorations.current.clear();
               return;
             }
 
@@ -325,6 +418,10 @@ export default function EDIEditor({
             );
           });
 
+          /*
+           * EDIFACT segment pin/unpin interaction.
+           * XML never enters this logic.
+           */
           editor.onMouseDown((event) => {
             if (event.event.detail !== 2) return;
 
@@ -332,11 +429,15 @@ export default function EDIEditor({
 
             if (!model) return;
 
+            if (model.getLanguageId() !== "plaintext") {
+              return;
+            }
+
             const position = event.target.position;
 
             if (!position) return;
 
-            // Только первые три буквы сегмента
+            // Only the first three characters of an EDIFACT segment.
             if (position.column > 4) return;
 
             const line = model.getLineContent(position.lineNumber);
@@ -361,6 +462,7 @@ export default function EDIEditor({
             ].includes(tag);
 
             const pinned = new Map(pinnedSegments.current);
+
             const disabled = new Set(disabledSegments.current);
 
             if (hasDefaultColor) {
@@ -394,24 +496,31 @@ export default function EDIEditor({
           glyphMargin: true,
           lineNumbersMinChars: 1,
           lineDecorationsWidth: 1,
+
           minimap: {
             enabled: false,
           },
+
           fontSize: 15,
           fontFamily: "JetBrains Mono",
           fontLigatures: true,
           lineHeight: 26,
+
           wordWrap: "on",
           automaticLayout: true,
           scrollBeyondLastLine: false,
           smoothScrolling: true,
+
           cursorBlinking: "phase",
           cursorSmoothCaretAnimation: "on",
+
           renderLineHighlight: "all",
           roundedSelection: true,
+
           guides: {
             indentation: true,
           },
+
           padding: {
             top: 20,
             bottom: 20,

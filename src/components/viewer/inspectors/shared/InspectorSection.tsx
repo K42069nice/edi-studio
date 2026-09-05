@@ -4,6 +4,7 @@ type Field = {
   label: string;
   value?: string | null;
   segment?: string;
+  searchValue?: string;
 };
 
 type Props = {
@@ -12,7 +13,7 @@ type Props = {
 };
 
 export default function InspectorSection({ title, fields }: Props) {
-  const visibleFields = fields.filter((f) => f.value);
+  const visibleFields = fields.filter((field) => field.value);
 
   if (visibleFields.length === 0) {
     return null;
@@ -25,12 +26,13 @@ export default function InspectorSection({ title, fields }: Props) {
       </div>
 
       <div className="divide-y divide-zinc-800">
-        {visibleFields.map((field) => (
+        {visibleFields.map((field, index) => (
           <FieldCard
-            key={field.label}
+            key={`${field.label}-${index}`}
             label={field.label}
             value={field.value ?? undefined}
             segment={field.segment}
+            searchValue={field.searchValue}
           />
         ))}
       </div>
