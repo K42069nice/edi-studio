@@ -3,7 +3,13 @@
 import Editor from "@monaco-editor/react";
 import { useEditor } from "@/context/EditorContext";
 import { EDIFACT_SEGMENTS } from "@/lib/edifactSegments";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type DragEvent,
+} from "react";
 import type { editor } from "monaco-editor";
 import {
   updateSegmentDecorations,
@@ -55,6 +61,13 @@ export default function EDIEditor({
   const disabledSegments = useRef(new Set<string>());
 
   const [isDragActive, setIsDragActive] = useState(false);
+
+  const [cursorPosition, setCursorPosition] = useState({
+    lineNumber: 1,
+    column: 1,
+  });
+
+  const [selectedCharacters, setSelectedCharacters] = useState(0);
 
   const { registerScrollFunction } = useEditor();
 
@@ -378,8 +391,21 @@ export default function EDIEditor({
            * EDIFACT segment selection highlighting.
            * Disabled completely for XML.
            */
-          editor.onDidChangeCursorSelection(() => {
+          editor.onDidChangeCursorSelection(({ selection }) => {
             const model = editor.getModel();
+
+            const position = selection.getPosition();
+
+            setCursorPosition({
+              lineNumber: position.lineNumber,
+              column: position.column,
+            });
+
+            setSelectedCharacters(
+              model && !selection.isEmpty()
+                ? model.getValueLengthInRange(selection)
+                : 0,
+            );
 
             if (!model || !highlightDecorations.current) return;
 
@@ -387,10 +413,6 @@ export default function EDIEditor({
               highlightDecorations.current.clear();
               return;
             }
-
-            const selection = editor.getSelection();
-
-            if (!selection) return;
 
             const text = model.getValueInRange(selection).trim();
 
@@ -523,7 +545,7 @@ export default function EDIEditor({
 
           padding: {
             top: 20,
-            bottom: 20,
+            bottom: 48,
           },
         }}
       />
@@ -534,6 +556,17 @@ export default function EDIEditor({
           isDragActive={isDragActive}
         />
       )}
+
+      <div className="absolute inset-x-0 bottom-0 z-20 flex h-8 items-center justify-end gap-4 border-t border-zinc-800 bg-zinc-950 px-3 text-[11px] text-zinc-400">
+        <span className="tabular-nums">
+          {selectedCharacters}{" "}
+          {selectedCharacters === 1 ? "character" : "characters"} selected
+        </span>
+
+        <span className="tabular-nums">
+          Ln {cursorPosition.lineNumber}, Col {cursorPosition.column}
+        </span>
+      </div>
 
       <input
         ref={fileInputRef}
